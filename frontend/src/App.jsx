@@ -1,3 +1,5 @@
+import { GAME_REGISTRY } from './games/registry';
+import GameWrapper from './games/GameWrapper';
 import CaregiverDashboard from './CaregiverDashboard';
 import React, { useState } from 'react';
 import { 
@@ -11,6 +13,7 @@ function App() {
   const [activeCategory, setActiveCategory] = useState('All');
   const [mood, setMood] = useState(null);
   const [userRole, setUserRole] = useState('patient'); // 'patient' or 'caregiver'
+  const [activeGameId, setActiveGameId] = useState(null);
 
   // Categories from your notebook sketch
   const categories = [
@@ -91,18 +94,24 @@ function App() {
               </div>
             </section>
 
+            {/* Dynamic Games Section - Renders every game in the registry */}
             <section className="memory-check-section">
-              <div className="memory-card">
-                <div className="memory-icon-bg">
-                  <Brain size={28} color="#4f46e5" />
-                </div>
-                <div className="memory-content">
-                  <h2>Today's Question</h2>
-                  <p>Can you identify these family photos?</p>
-                </div>
-                <button className="play-btn">
-                  <PlayCircle size={32} color="#4f46e5" />
-                </button>
+              <h2>Cognitive & Memory Games</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '10px' }}>
+                {GAME_REGISTRY.map((game) => (
+                  <div key={game.id} className="memory-card" style={{ display: 'flex', alignItems: 'center', background: '#eef2ff', padding: '16px', borderRadius: '16px', gap: '15px' }}>
+                    <div className="memory-icon-bg" style={{ background: 'white', padding: '12px', borderRadius: '12px', display: 'flex' }}>
+                      <game.icon size={28} color="#4f46e5" />
+                    </div>
+                    <div className="memory-content" style={{ flex: 1 }}>
+                      <h2 style={{ margin: 0, fontSize: '16px', color: '#312e81' }}>{game.title}</h2>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#4338ca' }}>{game.englishDescription}</p>
+                    </div>
+                    <button className="play-btn" onClick={() => setActiveGameId(game.id)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                      <PlayCircle size={32} color="#4f46e5" />
+                    </button>
+                  </div>
+                ))}
               </div>
             </section>
 
@@ -131,6 +140,13 @@ function App() {
         // --- CAREGIVER UI STARTS HERE ---
         <CaregiverDashboard />
       )}
+    {activeGameId && (
+     <GameWrapper 
+       gameConfig={GAME_REGISTRY.find(g => g.id === activeGameId)} 
+       onExit={() => setActiveGameId(null)} 
+       activeLanguage="en" 
+     />
+   )}
     </div>
   );
 }

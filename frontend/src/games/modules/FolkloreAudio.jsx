@@ -1,0 +1,12 @@
+import React from 'react';
+
+export default function FolkloreAudio({ language, onComplete }) {
+  return (
+    <div style={{ textAlign: 'center', width: '100%' }}>
+      <h3>🎵 Folklore Listening</h3>
+      <button onClick={() => onComplete(100, {})} style={{ padding: '10px', background: '#10b981', color: 'white', borderRadius: '8px' }}>
+        Simulate Win
+      </button>
+    </div>
+  );
+}
