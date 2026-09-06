@@ -1,122 +1,125 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import React, { useState } from 'react';
+import { 
+  MapPin, User, Pill, Droplet, Utensils, 
+  Calendar, ClipboardList, Mic, Brain, 
+  Flame, Smile, Meh, Frown, PlayCircle 
+} from 'lucide-react';
+import './App.css';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [activeCategory, setActiveCategory] = useState('All');
+  const [mood, setMood] = useState(null);
+
+  // Categories from your notebook sketch
+  const categories = [
+    { name: 'All', icon: ClipboardList },
+    { name: 'Medicine', icon: Pill },
+    { name: 'Hydration', icon: Droplet },
+    { name: 'Meal', icon: Utensils },
+    { name: 'Appointment', icon: Calendar },
+  ];
+
+  // Mock reminder data
+  const reminders = [
+    { id: 1, type: 'Medicine', title: 'Morning Blood Pressure Pill', time: '08:00 AM', status: 'pending' },
+    { id: 2, type: 'Hydration', title: 'Drink 1 Glass of Water', time: '09:30 AM', status: 'pending' },
+    { id: 3, type: 'Meal', title: 'Breakfast (Oats & Fruit)', time: '10:00 AM', status: 'completed' }
+  ];
+
+  const filteredReminders = activeCategory === 'All' 
+    ? reminders 
+    : reminders.filter(r => r.type === activeCategory);
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="app-container">
+      {/* 1. Header: Region, Streak, and Profile */}
+      <header className="top-nav">
+        <div className="region-badge">
+          <MapPin size={16} />
+          <span>Assam</span>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
+        <div className="nav-actions">
+          <div className="streak-badge">
+            <Flame size={16} color="#ff8b00" />
+            <span>12 Day Streak</span>
+          </div>
+          <button className="icon-btn profile-btn"><User size={20} /></button>
         </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+      </header>
 
-      <div className="ticks"></div>
+      <main className="main-content">
+        <h1 className="greeting">Good Morning, Aita.</h1>
+        <p className="date-text">Today is Thursday, September 10th</p>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+        {/* 2. Categories / Filters */}
+        <div className="category-scroll">
+          {categories.map(cat => (
+            <button 
+              key={cat.name} 
+              className={`category-pill ${activeCategory === cat.name ? 'active' : ''}`}
+              onClick={() => setActiveCategory(cat.name)}
+            >
+              <cat.icon size={18} />
+              <span>{cat.name}</span>
+            </button>
+          ))}
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        {/* 3. Reminders Hub */}
+        <section className="reminders-section">
+          <h2>Your Schedule</h2>
+          <div className="reminder-list">
+            {filteredReminders.map(rem => (
+              <div key={rem.id} className={`reminder-card ${rem.status}`}>
+                <div className="reminder-info">
+                  <h3>{rem.title}</h3>
+                  <p>{rem.time}</p>
+                </div>
+                <div className="checkbox"></div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* 4. Today's Memory Check (Game Entry Point) */}
+        <section className="memory-check-section">
+          <div className="memory-card">
+            <div className="memory-icon-bg">
+              <Brain size={28} color="#4f46e5" />
+            </div>
+            <div className="memory-content">
+              <h2>Today's Question</h2>
+              <p>Can you identify these family photos?</p>
+            </div>
+            <button className="play-btn">
+              <PlayCircle size={32} color="#4f46e5" />
+            </button>
+          </div>
+        </section>
+
+        {/* 5. Mood Log */}
+        <section className="mood-section">
+          <h2>How are you feeling today?</h2>
+          <div className="mood-buttons">
+            <button className={`mood-btn ${mood === 'happy' ? 'selected' : ''}`} onClick={() => setMood('happy')}>
+              <Smile size={36} color="#22c55e" />
+            </button>
+            <button className={`mood-btn ${mood === 'neutral' ? 'selected' : ''}`} onClick={() => setMood('neutral')}>
+              <Meh size={36} color="#f59e0b" />
+            </button>
+            <button className={`mood-btn ${mood === 'sad' ? 'selected' : ''}`} onClick={() => setMood('sad')}>
+              <Frown size={36} color="#ef4444" />
+            </button>
+          </div>
+        </section>
+      </main>
+
+      {/* 6. Echo Floating Assistant (1.5 from Notebook) */}
+      <button className="echo-assistant-fab">
+        <Mic size={28} color="white" />
+      </button>
+    </div>
+  );
 }
 
-export default App
+export default App;
