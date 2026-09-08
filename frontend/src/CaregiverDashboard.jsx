@@ -1,14 +1,51 @@
+import React, { useState, useEffect } from 'react';
 import TranslatedText from './components/TranslatedText';
-import React from 'react';
 import { Activity, AlertTriangle, CheckCircle, Clock, ShieldAlert, BrainCircuit, HeartPulse, Globe } from 'lucide-react';
 import { useTranslation, SUPPORTED_LANGUAGES } from './context/TranslationContext';
 
 function CaregiverDashboard() {
   const { activeLanguage, setActiveLanguage } = useTranslation();
+  
+  // State to hold the live data
+  const [liveMetrics, setLiveMetrics] = useState({
+    score: '...',
+    game: 'Loading data...'
+  });
+
+  // Fetch the data from Flask
+  useEffect(() => {
+    const fetchPatientData = async () => {
+      try {
+        const response = await fetch('http://127.0.0.1:5000/api/patient/metrics');
+        const data = await response.json();
+        
+        if (data.status === 'success' && data.metrics.latest_score !== null) {
+          // Format the game ID to look nice (e.g., "family-photo-recall" -> "Family Photo Recall")
+          const formattedGameName = data.metrics.latest_game
+            .split('-')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+
+          setLiveMetrics({
+            score: data.metrics.latest_score,
+            game: formattedGameName
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching live metrics:", error);
+        setLiveMetrics({ score: 'N/A', game: 'Offline Mode' });
+      }
+    };
+
+    fetchPatientData();
+    
+    // Optional Hackathon Trick: Auto-refresh the data every 5 seconds
+    const interval = setInterval(fetchPatientData, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="caregiver-container">
-      {/* 1. Header & Patient Info */}
       {/* 1. Header & Patient Info */}
       <header className="caregiver-header" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
         
@@ -74,8 +111,10 @@ function CaregiverDashboard() {
               <BrainCircuit size={20} color="#10b981" />
               <span><TranslatedText>Cognitive Session</TranslatedText></span>
             </div>
-            <h3><TranslatedText>Completed</TranslatedText></h3>
-            <p className="subtext"><TranslatedText>Score: 85/100 (Gamosa Patterns)</TranslatedText></p>
+            {/* Live Database Score */}
+            <h3>{liveMetrics.score !== '...' && liveMetrics.score !== 'N/A' ? `${liveMetrics.score}/100` : liveMetrics.score}</h3>
+            {/* Live Database Game Name */}
+            <p className="subtext"><TranslatedText>{liveMetrics.game}</TranslatedText></p>
           </div>
 
           <div className="metric-card">
