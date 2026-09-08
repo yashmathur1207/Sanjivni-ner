@@ -1,3 +1,4 @@
+import { useTranslation, SUPPORTED_LANGUAGES } from './context/TranslationContext';
 import { GAME_REGISTRY } from './games/registry';
 import GameWrapper from './games/GameWrapper';
 import CaregiverDashboard from './CaregiverDashboard';
@@ -14,6 +15,7 @@ function App() {
   const [mood, setMood] = useState(null);
   const [userRole, setUserRole] = useState('patient'); // 'patient' or 'caregiver'
   const [activeGameId, setActiveGameId] = useState(null);
+  const { activeLanguage, setActiveLanguage } = useTranslation();
 
   // Categories from your notebook sketch
   const categories = [
@@ -49,17 +51,19 @@ function App() {
         // --- PATIENT UI STARTS HERE ---
         <>
           <header className="top-nav">
-            <div className="region-badge">
-              <MapPin size={16} />
-              <span>Assam</span>
-            </div>
-            <div className="nav-actions">
-              <div className="streak-badge">
-                <Flame size={16} color="#ff8b00" />
-                <span>12 Day Streak</span>
-              </div>
-              <button className="icon-btn profile-btn"><User size={20} /></button>
-            </div>
+         <div className="region-badge">
+           <MapPin size={16} />
+           <select 
+             value={activeLanguage} 
+             onChange={(e) => setActiveLanguage(e.target.value)}
+             style={{ background: 'transparent', border: 'none', fontWeight: 'bold', color: 'inherit', outline: 'none' }}
+           >
+             {SUPPORTED_LANGUAGES.map(lang => (
+               <option key={lang.code} value={lang.code}>{lang.label}</option>
+             ))}
+           </select>
+         </div>
+         {/* ... rest of the header ... */}
           </header>
 
           <main className="main-content">

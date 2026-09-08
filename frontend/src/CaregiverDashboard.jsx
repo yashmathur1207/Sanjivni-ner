@@ -1,21 +1,47 @@
+import TranslatedText from './components/TranslatedText';
 import React from 'react';
-import { Activity, AlertTriangle, CheckCircle, Clock, ShieldAlert, BrainCircuit, HeartPulse } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle, Clock, ShieldAlert, BrainCircuit, HeartPulse, Globe } from 'lucide-react';
+import { useTranslation, SUPPORTED_LANGUAGES } from './context/TranslationContext';
 
 function CaregiverDashboard() {
+  const { activeLanguage, setActiveLanguage } = useTranslation();
+
   return (
     <div className="caregiver-container">
       {/* 1. Header & Patient Info */}
-      <header className="caregiver-header">
-        <div className="patient-profile">
-          <div className="avatar">A</div>
-          <div>
-            <h2>Aita (Grandmother)</h2>
-            <p>UID: SANJ-8842-NER | Stage: Mild Cognitive Impairment</p>
+      {/* 1. Header & Patient Info */}
+      <header className="caregiver-header" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+        
+        {/* Top Row: Language Selector (Pushed to Right) */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', background: '#f1f5f9', padding: '6px 12px', borderRadius: '20px', fontSize: '14px', fontWeight: '600' }}>
+            <Globe size={16} color="#475569" />
+            <select 
+              value={activeLanguage} 
+              onChange={(e) => setActiveLanguage(e.target.value)}
+              style={{ background: 'transparent', border: 'none', fontWeight: 'bold', color: '#475569', outline: 'none', cursor: 'pointer' }}
+            >
+              {SUPPORTED_LANGUAGES.map(lang => (
+                <option key={lang.code} value={lang.code}>{lang.label}</option>
+              ))}
+            </select>
           </div>
         </div>
-        <div className="health-status safe">
-          <CheckCircle size={20} />
-          <span>Stable</span>
+
+        {/* Bottom Row: Profile (Left) & Status (Right) */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="patient-profile" style={{ display: 'flex', alignItems: 'center', gap: '15px', textAlign: 'left' }}>
+            <div className="avatar">A</div>
+            <div>
+              <h2 style={{ margin: 0, fontSize: '20px', color: '#0f172a' }}>Aita (Grandmother)</h2>
+              <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#64748b', maxWidth: '200px' }}>UID: SANJ-8842-NER | Stage: Mild Cognitive Impairment</p>
+            </div>
+          </div>
+          
+          <div className="health-status safe" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10b981', fontWeight: '600', fontSize: '14px' }}>
+            <CheckCircle size={20} />
+            <span>Stable</span>
+          </div>
         </div>
       </header>
 
@@ -37,19 +63,19 @@ function CaregiverDashboard() {
           <div className="metric-card">
             <div className="metric-header">
               <Activity size={20} color="#4f46e5" />
-              <span>Medication</span>
+              <span><TranslatedText>Medication</TranslatedText></span>
             </div>
             <h3>100%</h3>
-            <p className="subtext">All morning pills taken</p>
+            <p className="subtext"><TranslatedText>All morning pills taken</TranslatedText></p>
           </div>
           
           <div className="metric-card">
             <div className="metric-header">
               <BrainCircuit size={20} color="#10b981" />
-              <span>Cognitive Session</span>
+              <span><TranslatedText>Cognitive Session</TranslatedText></span>
             </div>
-            <h3>Completed</h3>
-            <p className="subtext">Score: 85/100 (Gamosa Patterns)</p>
+            <h3><TranslatedText>Completed</TranslatedText></h3>
+            <p className="subtext"><TranslatedText>Score: 85/100 (Gamosa Patterns)</TranslatedText></p>
           </div>
 
           <div className="metric-card">
