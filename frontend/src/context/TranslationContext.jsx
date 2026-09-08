@@ -1,76 +1,82 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 
-// Create the Context
 const TranslationContext = createContext();
 
-// Bhashini Language Codes for NER
 export const SUPPORTED_LANGUAGES = [
   { code: 'en', label: 'English' },
   { code: 'as', label: 'Assamese (অসমীয়া)' },
   { code: 'mni', label: 'Manipuri (মৈতৈলোন্)' },
-  { code: 'bn', label: 'Bengali (বাংলা)' } // Widely used in Tripura/parts of Assam
+  { code: 'bn', label: 'Bengali (বাংলা)' }
 ];
 
 export function TranslationProvider({ children }) {
   const [activeLanguage, setActiveLanguage] = useState('en');
+  const [userRegion, setUserRegion] = useState('Detecting Location...');
 
-  // The Core Engine: Sends text to Bhashini API
+  // 🌍 AUTO-DETECT REGION ON LOAD
+  useEffect(() => {
+    const detectLocation = async () => {
+      try {
+        // Ping a free IP Geolocation API
+        const response = await fetch('https://ipapi.co/json/');
+        const data = await response.json();
+        
+        if (data.region) {
+          setUserRegion(data.region); // e.g., "Assam", "Manipur"
+          
+          // Map the detected state to our Bhashini languages
+          if (data.region === 'Assam') setActiveLanguage('as');
+          else if (data.region === 'Manipur') setActiveLanguage('mni');
+          else if (data.region === 'Tripura' || data.region === 'West Bengal') setActiveLanguage('bn');
+          // Defaults to 'en' if outside the localized zones
+        } else {
+          setUserRegion('Assam'); 
+        }
+      } catch (error) {
+        console.error("Location detection failed, using fallback.", error);
+        setUserRegion('Assam');
+      }
+    };
+
+    detectLocation();
+  }, []);
+
   const translateText = async (text) => {
-    // If it's English, no translation needed
     if (activeLanguage === 'en') return text;
 
-    // TODO: Replace with your actual Bhashini API key and Pipeline ID
     const BHASHINI_API_KEY = import.meta.env.VITE_BHASHINI_API_KEY || ""; 
     const BHASHINI_ENDPOINT = "https://dhruva-api.bhashini.gov.in/services/inference/pipeline";
 
     if (!BHASHINI_API_KEY) {
-      // 🚨 MOCK FALLBACK (so you can keep coding without the key)
-      console.warn("No Bhashini Key found. Using mock translation.");
       if (activeLanguage === 'as') return `[অসমীয়া] ${text}`;
       if (activeLanguage === 'mni') return `[মৈতৈলোন্] ${text}`;
+      if (activeLanguage === 'bn') return `[বাংলা] ${text}`;
       return text;
     }
 
     try {
-      // Standard Bhashini Dhruva API Payload
       const response = await fetch(BHASHINI_ENDPOINT, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': BHASHINI_API_KEY
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': BHASHINI_API_KEY },
         body: JSON.stringify({
-          pipelineTasks: [
-            {
-              taskType: "translation",
-              config: {
-                language: {
-                  sourceLanguage: "en",
-                  targetLanguage: activeLanguage
-                }
-              }
-            }
-          ],
-          inputData: {
-            input: [{ source: text }]
-          }
+          pipelineTasks: [{ taskType: "translation", config: { language: { sourceLanguage: "en", targetLanguage: activeLanguage } } }],
+          inputData: { input: [{ source: text }] }
         })
       });
-
       const data = await response.json();
       return data.pipelineResponse[0].output[0].target;
     } catch (error) {
       console.error("Bhashini API Error:", error);
-      return text; // Fallback to English if API crashes
+      return text; 
     }
   };
 
+  // We now export `userRegion` alongside the translation tools
   return (
-    <TranslationContext.Provider value={{ activeLanguage, setActiveLanguage, translateText }}>
+    <TranslationContext.Provider value={{ activeLanguage, setActiveLanguage, translateText, userRegion }}>
       {children}
     </TranslationContext.Provider>
   );
 }
 
-// Custom hook so your teammates can easily use this in their games
 export const useTranslation = () => useContext(TranslationContext);
