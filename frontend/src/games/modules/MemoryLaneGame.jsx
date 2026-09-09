@@ -1,28 +1,27 @@
 import React, { useState, useRef, useEffect } from "react";
 
 // --- Photos & descriptions ----------------------------------------------
-// PLACEHOLDER SET — these 2 photos are real, but this is still a small
-// starter set. Add more entries below as the caregiver uploads photos.
+// PLACEHOLDER SET — replace [Name] below with the real name once known;
+// everything else in the description is based on real visual detail in
+// the photo. Add more entries the same way as the caregiver uploads more.
 //
 // HOW TO ADD MORE PHOTOS LATER:
 //   1. Drop the image file into frontend/src/assets/memory/
 //   2. Add an `import` line for it below, next to the existing ones.
 //   3. Add a new object to the MEMORIES array with that image and a short,
-//      warm, second-person description (1-2 sentences — simple language,
-//      no dates/trivia quizzes, just enough to gently prompt recall).
+//      warm, second-person description (1-2 sentences, simple language).
 //   4. "as"/"mni" description fields are optional — if left blank, the
-//      English description is shown as a fallback. These should ideally be
-//      written by the caregiver directly (they know the memory best) or
-//      reviewed by a native speaker before shipping.
-import memory1 from "../../assets/memory/memory-1.webp";
-import memory2 from "../../assets/memory/memory-2.jpg";
+//      English description is shown as a fallback. Ideally written by the
+//      caregiver directly, or reviewed by a native speaker before shipping.
+import memory1 from "../../assets/memory/memory-1.png";
+import memory2 from "../../assets/memory/memory-2.png";
 
 const MEMORIES = [
   {
     id: "memory-1",
     image: memory1,
     description: {
-      en: "Your family gathered together to celebrate one of the children's birthdays — everyone dressed in their best for the occasion.",
+      en: "Everyone gathered outdoors under the trees to celebrate [Name]'s birthday — friends played the guitar and accordion while your whole family sang together.",
       as: "", // TODO: caregiver/native-speaker translation
       mni: "", // TODO: caregiver/native-speaker translation
     },
@@ -30,8 +29,11 @@ const MEMORIES = [
   {
     id: "memory-2",
     image: memory2,
+    // NOTE: read as a wedding day from the garlands, formal attire, and
+    // choir robes visible behind the group — correct this line if that's
+    // not what this photo actually shows.
     description: {
-      en: "You and your family set off on a trip together, standing by the car with your bags packed and ready to go.",
+      en: "This was [Name]'s wedding day — your family stood together in your best clothes, wearing garlands, with the choir singing behind you.",
       as: "",
       mni: "",
     },
@@ -57,47 +59,56 @@ function getStrings(language) {
 
 const STORAGE_KEY = "sanjivni:memoryLaneIndex";
 
-// Reads which photo comes next, and immediately advances the pointer for
-// the *following* visit — since GameWrapper fully unmounts this component
-// every time the person exits, plain React state can't remember progress
-// across separate opens the way it does within a single session.
-function getAndAdvanceIndex(total) {
-  let current = 0;
-  try {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    const parsed = stored !== null ? parseInt(stored, 10) : 0;
-    current = Number.isFinite(parsed) ? ((parsed % total) + total) % total : 0;
-  } catch (e) {
-    // localStorage unavailable (private browsing, etc.) — just start at 0
-    // every time rather than crashing the activity.
-    current = 0;
-  }
-
-  try {
-    const next = (current + 1) % total;
-    window.localStorage.setItem(STORAGE_KEY, String(next));
-  } catch (e) {
-    // ignore — worst case it always shows the same photo, not a crash
-  }
-
-  return current;
-}
-
 export default function MemoryLaneGame({ language, onComplete }) {
-  // NOTE ON `onComplete`: intentionally unused here. This is a reflection
-  // exercise, not a scored game — there's no win/lose moment, and by
-  // design the person closes it whenever they're ready via GameWrapper's
-  // own exit button rather than being auto-closed. That means this
-  // activity does not currently report telemetry to the caregiver
-  // dashboard. If that's ever needed, it would take a deliberate design
-  // change (see conversation notes) rather than just wiring this back in.
+  // NOTE ON `onComplete`: intentionally unused. This is a reflection
+  // exercise, not a scored game — no win/lose moment, and by design the
+  // person closes it whenever ready via GameWrapper's own exit button
+  // rather than being auto-closed. This activity does not report
+  // telemetry to the caregiver dashboard (deliberate, see project notes).
   void onComplete;
 
   const t = getStrings(language);
 
-  const [memoryIndex] = useState(() => getAndAdvanceIndex(MEMORIES.length));
+  const [memoryIndex, setMemoryIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [naturalSize, setNaturalSize] = useState(null); // {width, height}
+
+  // Guards against React 18 StrictMode's dev-only double-invoke of
+  // effects. Without this, the "advance to next photo" logic below would
+  // silently run twice per real visit in development — advancing the
+  // stored index by 2 instead of 1, which (with only 2 photos) made it
+  // look like the app was stuck showing the same photo forever. This
+  // guard has no effect in production, where effects only ever run once.
+  const hasInitializedRef = useRef(false);
+
+  useEffect(() => {
+    if (hasInitializedRef.current) return;
+    hasInitializedRef.current = true;
+
+    const total = MEMORIES.length;
+    let current = 0;
+
+    try {
+      const stored = window.localStorage.getItem(STORAGE_KEY);
+      const parsed = stored !== null ? parseInt(stored, 10) : 0;
+      current = Number.isFinite(parsed)
+        ? ((parsed % total) + total) % total
+        : 0;
+    } catch (e) {
+      // localStorage unavailable (private browsing, etc.) — default to 0
+      // rather than crashing the activity.
+      current = 0;
+    }
+
+    setMemoryIndex(current);
+
+    try {
+      const next = (current + 1) % total;
+      window.localStorage.setItem(STORAGE_KEY, String(next));
+    } catch (e) {
+      // ignore — worst case it always shows the same photo, not a crash
+    }
+  }, []);
 
   const memory = MEMORIES[memoryIndex];
   const description = memory.description[language] || memory.description.en;
@@ -125,6 +136,7 @@ export default function MemoryLaneGame({ language, onComplete }) {
     <div style={styles.container}>
       <div style={imageWrapStyle}>
         <img
+          key={memory.id}
           src={memory.image}
           alt=""
           style={styles.image}
@@ -149,9 +161,6 @@ export default function MemoryLaneGame({ language, onComplete }) {
 }
 
 // --- Styles ---------------------------------------------------------------
-// Kept consistent with the app's other games (same purple accent, card
-// shadow language) while staying much simpler — no progress bar, no
-// scoring UI, since this isn't a round-based activity.
 const styles = {
   container: {
     display: "flex",
