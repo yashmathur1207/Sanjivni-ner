@@ -1,24 +1,96 @@
+import React, { useState } from 'react';
 import TranslatedText from './components/TranslatedText';
 import { useTranslation, SUPPORTED_LANGUAGES } from './context/TranslationContext';
 import { GAME_REGISTRY } from './games/registry';
 import GameWrapper from './games/GameWrapper';
 import CaregiverDashboard from './CaregiverDashboard';
-import React, { useState } from 'react';
+import LoginPage from './LoginPage'; // <-- NEW IMPORT
 import { 
   MapPin, User, Pill, Droplet, Utensils, 
   Calendar, ClipboardList, Mic, Brain, 
-  Flame, Smile, Meh, Frown, PlayCircle 
+  Flame, PlayCircle 
 } from 'lucide-react';
 import './App.css';
 
+// 1. Custom SVG Wave Generator
+const WaveIcon = ({ level, color, size = 32 }) => {
+  const paths = {
+    1: "M2 12 L 5 2 L 8 22 L 12 2 L 15 22 L 19 2 L 22 12",
+    2: "M2 12 L 7 6 L 12 18 L 17 6 L 22 12",               
+    3: "M2 12 Q 7 10 12 12 T 22 12",                       
+    4: "M2 12 Q 7 4 12 12 T 22 12",                        
+    5: "M2 12 Q 4.5 4 7 12 T 12 12 T 17 12 T 22 12"        
+  };
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'all 0.3s ease' }}>
+      <path d={paths[level]} />
+    </svg>
+  );
+};
+
+// 2. The Mood Selector UI
+const MoodSelector = () => {
+  const [selectedMood, setSelectedMood] = useState(null);
+
+  const moods = [
+    { level: 1, label: "Very Unpleasant", color: "#ef4444" },
+    { level: 2, label: "Unpleasant", color: "#f97316" },     
+    { level: 3, label: "Neutral", color: "#94a3b8" },        
+    { level: 4, label: "Pleasant", color: "#84cc16" },       
+    { level: 5, label: "Very Pleasant", color: "#10b981" }   
+  ];
+
+  const handleMoodSelect = (mood) => {
+    setSelectedMood(mood.level);
+    console.log(`Mood logged: ${mood.label} (Level ${mood.level})`);
+  };
+
+  return (
+    <div style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
+      <h2 style={{ margin: '0 0 15px 0', fontSize: '18px', color: '#1e293b' }}>
+        <TranslatedText>How are you feeling today?</TranslatedText>
+      </h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+        {moods.map((mood) => {
+          const isSelected = selectedMood === mood.level;
+          return (
+            <button
+              key={mood.level}
+              onClick={() => handleMoodSelect(mood)}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                flex: 1, padding: '12px 4px', borderRadius: '10px', cursor: 'pointer',
+                transition: 'all 0.2s ease', border: '2px solid',
+                borderColor: isSelected ? mood.color : '#e2e8f0',
+                backgroundColor: isSelected ? `${mood.color}15` : 'transparent',
+                transform: isSelected ? 'scale(1.05)' : 'scale(1)'
+              }}
+              title={mood.label}
+            >
+              <WaveIcon level={mood.level} color={isSelected ? mood.color : '#cbd5e1'} />
+              <span style={{ fontSize: '11px', marginTop: '10px', fontWeight: isSelected ? '700' : '500', color: isSelected ? mood.color : '#64748b', textAlign: 'center', lineHeight: '1.2' }}>
+                <TranslatedText>{mood.label}</TranslatedText>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// 3. Main Application Component
 function App() {
+  // NEW: Authentication State
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+
   const [activeCategory, setActiveCategory] = useState('All');
-  const [mood, setMood] = useState(null);
-  const [userRole, setUserRole] = useState('patient'); // 'patient' or 'caregiver'
+  const [userRole, setUserRole] = useState('patient'); 
   const [activeGameId, setActiveGameId] = useState(null);
   const { activeLanguage, setActiveLanguage, userRegion } = useTranslation();
 
-  // Categories from your notebook sketch
   const categories = [
     { name: 'All', icon: ClipboardList },
     { name: 'Medicine', icon: Pill },
@@ -27,7 +99,6 @@ function App() {
     { name: 'Appointment', icon: Calendar },
   ];
 
-  // Mock reminder data
   const reminders = [
     { id: 1, type: 'Medicine', title: 'Morning Blood Pressure Pill', time: '08:00 AM', status: 'pending' },
     { id: 2, type: 'Hydration', title: 'Drink 1 Glass of Water', time: '09:30 AM', status: 'pending' },
@@ -38,9 +109,21 @@ function App() {
     ? reminders 
     : reminders.filter(r => r.type === activeCategory);
 
-return (
+  // 🔴 AUTHENTICATION INTERCEPTOR: Show Login Page if not logged in
+  if (!isAuthenticated) {
+    return (
+      <LoginPage onLoginSuccess={(user) => {
+        setCurrentUser(user);
+        setUserRole(user.role); // Automatically sets 'patient' or 'caregiver' based on registration!
+        setIsAuthenticated(true);
+      }} />
+    );
+  }
+
+  // Once authenticated, show the main app:
+  return (
     <div className="app-container">
-      {/* DEVELOPER TOGGLE */}
+      {/* DEVELOPER TOGGLE (Keep for hackathon demo purposes) */}
       <button 
         onClick={() => setUserRole(userRole === 'patient' ? 'caregiver' : 'patient')}
         style={{ position: 'absolute', top: 0, right: 0, zIndex: 9999, background: 'black', color: 'white', padding: '5px' }}
@@ -53,7 +136,6 @@ return (
           <header className="top-nav">
             <div className="region-badge">
               <MapPin size={16} />
-              {/* Automatically shows detected state, plus manual override */}
               <span style={{ marginRight: '8px' }}><TranslatedText>{userRegion}</TranslatedText></span>
               <select 
                 value={activeLanguage} 
@@ -75,7 +157,10 @@ return (
           </header>
 
           <main className="main-content">
-            <h1 className="greeting"><TranslatedText>Good Morning, Aita.</TranslatedText></h1>
+            {/* Dynamic Greeting based on Registered Name! */}
+            <h1 className="greeting">
+              <TranslatedText>Good Morning</TranslatedText>, {currentUser?.name || 'Aita'}.
+            </h1>
             <p className="date-text"><TranslatedText>Today is Thursday, September 10th</TranslatedText></p>
 
             <div className="category-scroll">
@@ -106,6 +191,8 @@ return (
               </div>
             </section>
 
+            <MoodSelector />
+
             <section className="memory-check-section">
               <h2><TranslatedText>Cognitive & Memory Games</TranslatedText></h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '10px' }}>
@@ -125,21 +212,6 @@ return (
                 ))}
               </div>
             </section>
-
-            <section className="mood-section">
-              <h2><TranslatedText>How are you feeling today?</TranslatedText></h2>
-              <div className="mood-buttons">
-                <button className={`mood-btn ${mood === 'happy' ? 'selected' : ''}`} onClick={() => setMood('happy')}>
-                  <Smile size={36} color="#22c55e" />
-                </button>
-                <button className={`mood-btn ${mood === 'neutral' ? 'selected' : ''}`} onClick={() => setMood('neutral')}>
-                  <Meh size={36} color="#f59e0b" />
-                </button>
-                <button className={`mood-btn ${mood === 'sad' ? 'selected' : ''}`} onClick={() => setMood('sad')}>
-                  <Frown size={36} color="#ef4444" />
-                </button>
-              </div>
-            </section>
           </main>
 
           <button className="echo-assistant-fab">
@@ -147,7 +219,7 @@ return (
           </button>
         </>
       ) : (
-        <CaregiverDashboard />
+        <CaregiverDashboard currentUser={currentUser} />
       )}
       
       {activeGameId && (

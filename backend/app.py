@@ -1,6 +1,7 @@
 import os
+import random
+import string
 from flask import Flask, jsonify, request
-from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 
@@ -19,10 +20,19 @@ class User(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     uid = db.Column(db.String(50), unique=True, nullable=False)
+    name = db.Column(db.String(100))
     role = db.Column(db.String(20), default='patient') # 'patient' or 'caregiver'
     region = db.Column(db.String(50))
     
-    # Relationship to link users to their game sessions
+    # Medical Vitals
+    weight = db.Column(db.Float) # in kg
+    height = db.Column(db.Float) # in cm
+    blood_group = db.Column(db.String(10))
+    allergies = db.Column(db.Text)
+    
+    # Linking mechanism
+    caregiver_uid = db.Column(db.String(50)) 
+    
     sessions = db.relationship('GameSession', backref='patient', lazy=True)
 
 class GameSession(db.Model):
@@ -43,6 +53,42 @@ class GameSession(db.Model):
             "completion_time": self.completion_time,
             "timestamp": self.timestamp.isoformat()
         }
+
+@app.route('/api/auth/register', methods=['POST'])
+def register_user():
+    """Registers a new patient or caregiver, generates a UID, and saves vitals."""
+    data = request.json
+    role = data.get('role', 'patient')
+    
+    # Generate a professional health-tech UID (e.g., SANJ-PT-4928)
+    prefix = "PT" if role == 'patient' else "CG"
+    random_digits = ''.join(random.choices(string.digits, k=4))
+    new_uid = f"SANJ-{prefix}-{random_digits}"
+    
+    new_user = User(
+        uid=new_uid,
+        name=data.get('name'),
+        role=role,
+        weight=data.get('weight'),
+        height=data.get('height'),
+        blood_group=data.get('bloodGroup'),
+        allergies=data.get('allergies'),
+        caregiver_uid=data.get('caregiverUid')
+    )
+    
+    db.session.add(new_user)
+    db.session.commit()
+    
+    return jsonify({
+        "status": "success",
+        "message": "Registration complete",
+        "user": {
+            "uid": new_uid,
+            "name": new_user.name,
+            "role": new_user.role
+        }
+    }), 201
+
 @app.route('/', methods=['GET'])
 def home():
     """Default root endpoint so terminal links load immediately."""
@@ -91,6 +137,7 @@ def save_telemetry():
         "message": "Telemetry saved successfully!",
         "session_id": new_session.id
     }), 201
+
 @app.route('/api/patient/metrics', methods=['GET'])
 def get_patient_metrics():
     """Fetches the most recent game telemetry for the Caregiver Dashboard."""
@@ -127,5 +174,6 @@ def get_patient_metrics():
             "timestamp": latest_session.timestamp.isoformat()
         }
     }), 200
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
