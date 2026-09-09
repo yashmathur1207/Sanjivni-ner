@@ -1,14 +1,14 @@
 import { lazy } from 'react';
-import { Brain, Image as ImageIcon, Music, Sparkles } from 'lucide-react';
+import { Brain, Image as ImageIcon, Music, Sparkles, ListMusic } from 'lucide-react';
 
 export const GAME_REGISTRY = [
   {
     id: "family-photo-recall",
-    title: "Family Photo Recall",
-    englishDescription: "Identify family members from uploaded photos.",
+    title: "Memory Lane",
+    englishDescription: "Revisit a cherished family photo and take a quiet moment to remember.",
     cognitiveDomain: "Episodic Memory",
     icon: ImageIcon,
-    component: lazy(() => import('./modules/FamilyPhotoRecall.jsx')), 
+    component: lazy(() => import('./modules/MemoryLaneGame.jsx')),
   },
   {
     id: "gamosa-pattern-match",
@@ -33,5 +33,13 @@ export const GAME_REGISTRY = [
     cognitiveDomain: "Visual Recognition & Semantic Memory",
     icon: Sparkles,
     component: lazy(() => import('./modules/DanceRecognitionGame.jsx')),
+  },
+  {
+    id: "lyric-completion",
+    title: "Complete the Lyrics",
+    englishDescription: "Listen to a short North Eastern song and pick the correct next line from four options.",
+    cognitiveDomain: "Auditory Memory & Attention",
+    icon: ListMusic,
+    component: lazy(() => import('./modules/LyricCompletionGame.jsx')),
   }
 ];
