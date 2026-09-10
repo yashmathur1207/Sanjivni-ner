@@ -60,13 +60,6 @@ function getStrings(language) {
 const STORAGE_KEY = "sanjivni:memoryLaneIndex";
 
 export default function MemoryLaneGame({ language, onComplete }) {
-  // NOTE ON `onComplete`: intentionally unused. This is a reflection
-  // exercise, not a scored game — no win/lose moment, and by design the
-  // person closes it whenever ready via GameWrapper's own exit button
-  // rather than being auto-closed. This activity does not report
-  // telemetry to the caregiver dashboard (deliberate, see project notes).
-  void onComplete;
-
   const t = getStrings(language);
 
   const [memoryIndex, setMemoryIndex] = useState(0);
@@ -80,6 +73,56 @@ export default function MemoryLaneGame({ language, onComplete }) {
   // look like the app was stuck showing the same photo forever. This
   // guard has no effect in production, where effects only ever run once.
   const hasInitializedRef = useRef(false);
+
+  // --- Silent time tracking for caregiver --------------------------------
+  // Records how many seconds the patient takes before clicking
+  // "Do you remember?". The patient never sees this value — it is sent
+  // to the caregiver dashboard via onComplete when the game unmounts.
+  const mountTimeRef = useRef(Date.now());
+  const recallTimeRef = useRef(null); // null = button was never clicked
+  const memoryIdRef = useRef(null);
+
+  // Keep a stable ref to onComplete so the unmount cleanup always calls
+  // the latest version without needing it in the dependency array (which
+  // would cause the cleanup to fire on every re-render if the parent
+  // passes an unstable callback).
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  // --- StrictMode-safe unmount metric delivery ---------------------------
+  // In dev mode, React 18 StrictMode does mount → unmount → remount
+  // synchronously. A plain cleanup would call onComplete on the fake
+  // unmount and GameWrapper would close the game instantly.
+  //
+  // The trick: setTimeout(fn, 0) is async — it fires AFTER React's
+  // synchronous mount-unmount-remount cycle completes. So on the first
+  // fake unmount, activeRef is still false and onComplete is skipped.
+  // On a real unmount (user closes the game), activeRef is true and
+  // metrics are sent normally.
+  const activeRef = useRef(false);
+
+  // --- Telemetry delivery (DISABLED until backend pipeline is ready) ---
+  // The time-to-recall is still tracked in recallTimeRef when the
+  // patient clicks "Do you remember?". To enable sending it to the
+  // caregiver, uncomment the onComplete call below and ensure the
+  // backend's score column accepts NULL or the wrapper forwards metrics.
+  //
+  // useEffect(() => {
+  //   const timerId = setTimeout(() => { activeRef.current = true; }, 0);
+  //   return () => {
+  //     clearTimeout(timerId);
+  //     if (!activeRef.current) return;
+  //     if (onCompleteRef.current && recallTimeRef.current !== null) {
+  //       onCompleteRef.current(null, {
+  //         memoryId: memoryIdRef.current,
+  //         timeToRecallSeconds: recallTimeRef.current,
+  //         recalled: true,
+  //       });
+  //     }
+  //   };
+  // }, []);
 
   useEffect(() => {
     if (hasInitializedRef.current) return;
@@ -101,6 +144,7 @@ export default function MemoryLaneGame({ language, onComplete }) {
     }
 
     setMemoryIndex(current);
+    memoryIdRef.current = MEMORIES[current].id;
 
     try {
       const next = (current + 1) % total;
@@ -118,6 +162,15 @@ export default function MemoryLaneGame({ language, onComplete }) {
     if (naturalWidth && naturalHeight) {
       setNaturalSize({ width: naturalWidth, height: naturalHeight });
     }
+  };
+
+  // When the patient clicks "Do you remember?", silently record the
+  // elapsed time (in seconds, rounded to 2 decimals) and reveal the
+  // description. The time is NOT shown anywhere in the UI.
+  const handleReveal = () => {
+    const elapsedMs = Date.now() - mountTimeRef.current;
+    recallTimeRef.current = parseFloat((elapsedMs / 1000).toFixed(2));
+    setRevealed(true);
   };
 
   // Card sizing adapts to the photo's real aspect ratio once it loads.
@@ -148,7 +201,7 @@ export default function MemoryLaneGame({ language, onComplete }) {
       {!revealed && (
         <button
           type="button"
-          onClick={() => setRevealed(true)}
+          onClick={handleReveal}
           style={styles.revealButton}
         >
           {t.buttonLabel}
